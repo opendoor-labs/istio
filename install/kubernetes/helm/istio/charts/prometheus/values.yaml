@@ -57,3 +57,23 @@ service:
 
 security:
   enabled: true
+
+emptyDir:
+    sizeLimit: ""
+
+persistentVolume:
+  # If true, Prometheus will create/use a Persistent Volume Claim
+  # If false, use emptyDir
+  enabled: false
+  # Prometheus server data Persistent Volume access modes
+  accessModes:
+    - ReadWriteOnce
+  annotations: {}
+  # Prometheus data Persistent Volume existing claim name
+  # Requires server.persistentVolume.enabled: true
+  # If defined, PVC must be created before volume will be bound
+  existingClaim: ""
+  # Prometheus data Persistent Volume mount root path
+  mountPath: /data
+  # Persistent Volume size
+  size: 8Gi

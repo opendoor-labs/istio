@@ -1,7 +1,6 @@
-# TODO: the original template has service account, roles, etc
-{{- if not .Values.statefulSet.enabled -}}
+{{- if .Values.statefulSet.enabled }}
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: prometheus
   namespace: {{ .Release.Namespace }}
@@ -12,6 +11,7 @@ metadata:
     release: {{ .Release.Name }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  podManagementPolicy: {{ .Values.statefulSet.podManagementPolicy }}
   selector:
     matchLabels:
       app: prometheus
@@ -76,18 +76,6 @@ spec:
           optional: true
 {{- end }}
           secretName: istio.default
-      - name: storage-volume
-      {{- if .Values.persistentVolume.enabled }}
-        persistentVolumeClaim:
-          claimName: {{ if .Values.persistentVolume.existingClaim }}{{ .Values.persistentVolume.existingClaim }}{{- else }}{{ template "prometheus.fullname" . }}{{- end }}
-      {{- else }}
-        emptyDir:
-        {{- if .Values.emptyDir.sizeLimit }}
-          sizeLimit: {{ .Values.emptyDir.sizeLimit }}
-        {{- else }}
-          {}
-        {{- end -}}
-      {{- end }}
       affinity:
       {{- include "nodeaffinity" . | indent 6 }}
       {{- include "podAntiAffinity" . | indent 6 }}
@@ -98,4 +86,29 @@ spec:
       tolerations:
 {{ toYaml .Values.global.defaultTolerations | indent 6 }}
       {{- end }}
-{{- end -}}
+{{- if .Values.persistentVolume.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: storage-volume
+        {{- if .Values.persistentVolume.annotations }}
+        annotations:
+{{ toYaml .Values.persistentVolume.annotations | indent 10 }}
+        {{- end }}
+      spec:
+        accessModes:
+{{ toYaml .Values.persistentVolume.accessModes | indent 10 }}
+        resources:
+          requests:
+            storage: "{{ .Values.persistentVolume.size }}"
+      {{- if .Values.persistentVolume.storageClass }}
+      {{- if (eq "-" .Values.persistentVolume.storageClass) }}
+        storageClassName: ""
+      {{- else }}
+        storageClassName: "{{ .Values.persistentVolume.storageClass }}"
+      {{- end }}
+      {{- end }}
+{{- else }}
+        - name: storage-volume
+          emptyDir: {}
+{{- end }}
+{{- end }}
